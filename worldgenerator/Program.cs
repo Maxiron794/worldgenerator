@@ -15,78 +15,57 @@ namespace worldgenerator
     class Program
     {
         static float[,] landscape;
-        static float[,] biomes;
+        
 
-        enum biomeList { PLAINS, FOREST, JUNGLE, SAVANNAH, DESERT };
-        static biomeList GetBiome(int x, int y)
+        static Pen GetPen(int x, int y, int level, int temp)
         {
-            int level = Convert.ToInt32(biomes[x, y]);
-            if (level < 55)
+            if (0 < level && level <= 40)
             {
-                return biomeList.PLAINS;
+                if (temp <= 128) { return Pens.SkyBlue; }
+                else if (128 < temp && temp <= 255) { return Pens.Navy; }
+                else { return Pens.Black; }
             }
-            else if (level >= 55 && level < 110)
+            else if (40 < level && level <= 100)
             {
-                return biomeList.FOREST;
+                if (temp <= 128) { return Pens.LightBlue; }
+                else if (128 < temp && temp <= 255) { return Pens.Blue; }
+                else { return Pens.Black; }
             }
-            else if (level >= 110 && level < 165)
+            else if (100 < level && level <= 220)
             {
-                return biomeList.JUNGLE;
+                if (temp <= 128) { return Pens.Snow; }
+                else if (128 < temp && temp <= 230) { return Pens.ForestGreen; }
+                else if (230 < temp && temp <= 255) { return Pens.Yellow; }
+                else { return Pens.Black; }
             }
-            else if (level >= 165 && level < 220)
+            else if (220 < level && level <= 255)
             {
-                return biomeList.SAVANNAH;
+                if (temp <= 25) { return Pens.Snow; }
+                else if (25 < temp && temp <= 128) { return Pens.Gray; }
+                else if (128 < temp && temp <= 190) { return Pens.DarkGreen; }
+                else if (190 < temp && temp <= 255) { return Pens.ForestGreen; }
+                //else if (200 < temp && temp <= 255) { return Pens.Yellow; }
+                else { return Pens.Black; }
             }
-            else
-            {
-                return biomeList.DESERT;
-            }
-        }
-        static Pen GetBiomePen(biomeList biome)
-        {
-            switch (biome)
-            {
-                case (biomeList.PLAINS): { return Pens.Green; }
-                case (biomeList.FOREST): { return Pens.ForestGreen; }
-                case (biomeList.JUNGLE): { return Pens.Lime; }
-                case (biomeList.SAVANNAH): { return Pens.Olive; }
-                case (biomeList.DESERT): { return Pens.NavajoWhite; }
-                default: { return null; }
-            }
-        }
 
-        static Pen GetPen(int x, int y, int level)
-        {
-            if (level < 30)
-            {
-                return Pens.DarkBlue;
-            }
-            else if (level >= 30 && level < 90)
-            {
-                return Pens.Blue;
-            }
-            else if (level >= 90 && level < 105)
-            {
-                return Pens.Yellow;
-            }
-            else if (level >= 105 && level < 200)
-            {
-                return GetBiomePen(GetBiome(x, y));
-            }
-            else if (level >= 200 && level < 235)
-            {
-                return Pens.Gray;
-            }
-            else
-            {
-                return Pens.White;
-            } 
+            else { return Pens.Black; }
+
+
+            /*if (25 > temp) { return Pens.Snow; }
+            else if (25 <= temp && temp < 50) { return Pens.LightBlue; }
+            else if (50 <= temp && temp < 75) { return Pens.LightSkyBlue; }
+            else if (75 <= temp && temp < 100) { return Pens.SkyBlue; }
+            else if (100 <= temp && temp < 125) { return Pens.DeepSkyBlue; }
+            else if (125 <= temp && temp < 150) { return Pens.DarkBlue; }
+            else { return Pens.Red; }*/
+
         }
         static void Main(string[] args)
         {
-            Console.WriteLine("С:\\Users\\" + Environment.UserName + "\\Pictures\\generated.png");
-            Console.Write("Enter seed (blank for random) > ");
-            string seed = Console.ReadLine();
+            Console.Write("Enter landscape seed (blank for random) > ");
+            string landscapeseed = Console.ReadLine().Trim();
+            Console.Write("Enter temperature seed (blank for random) > ");
+            string temperatureseed = Console.ReadLine().Trim();
             Console.Write("Enter height (1024 - default) > ");
             string stringheight = Console.ReadLine();
             int height = 1024;
@@ -94,38 +73,59 @@ namespace worldgenerator
             Console.Write("Enter width (1024 - default) > ");
             string stringwidth = Console.ReadLine();
             int width = 1024;
-            if (stringheight != "") { height = Convert.ToInt32(stringheight); }
+            if (stringwidth != "") { width = Convert.ToInt32(stringwidth); }
 
-            if (seed.Trim() != "") { SimplexNoise.Noise.Seed = Convert.ToInt32(seed); }
-            landscape = Noise.Calc2D(width, height, 0.001f);
-            biomes = Noise.Calc2D(width, height, 0.01f);
+            float[,] temperature = new float[height, width];
 
+
+            if (landscapeseed != "") { Noise.Seed = Convert.ToInt32(landscapeseed); }
+            landscape = Noise.Calc2D(width, height, 10.0f/(height+width));
+            if (temperatureseed != "") { Noise.Seed = Convert.ToInt32(temperatureseed); }
+            temperature = Noise.Calc2D(width, height, 9.0f / (height + width));
+            for (int y = 0; y < height; y++)
+            {
+                float polusfactor = ((float)Math.Abs(Math.Sin(y / (height/10f) / Math.PI)) * 255.0f - 128f);
+                float landscapefactor = 0.0f;
+                for (int x = 0; x < width; x++)
+                {
+                    temperature[x, y] += polusfactor;
+                    if (landscape[x, y] >= 220 )
+                    {
+                    landscapefactor = (220.0f - landscape[x, y])* 6.0f;
+                        temperature[x, y] += landscapefactor;
+                    }
+                    if (temperature[x, y] > 255) { temperature[x, y] = 255.0f; }
+                    else if (temperature[x, y] < 0) { temperature[x, y] = 0.0f; }
+
+                }
+                Console.Write("\rFor y:{0} have polusfactor: {1} , Percent: " + ((int)(y * 100 / (height))) + " % ", y, polusfactor);
+            }
+            Console.WriteLine("\nPolus settings configured");
             Bitmap image = new Bitmap(width, height);
             Graphics graphics = Graphics.FromImage(image);
-
-            for (int x = 0; x < height; x++)
+            Console.WriteLine("Painting image, please wait, it can took a few minutes");
+            for (int y = 0; y < height; y++)
             {
-                for (int y = 0; y < width; y++)
+                for (int x = 0; x < width; x++)
                 {
-                    graphics.DrawRectangle(GetPen(x, y, (int)landscape[x, y]), x, y, 1, 1);
+                    graphics.DrawRectangle(GetPen(x, y, (int)landscape[x, y], (int)temperature[x, y]), x, y, 1, 1);
                 }
+                Console.Write("\rPercent: " + ((int)(y * 100 / height)) + "%");
             }
 
-            bool v = Directory.Exists("D:\\tempforgenerator");
-            if (v)
+            if (Directory.Exists("D:\\tempforgenerator"))
             {
-                Console.WriteLine("directory exist, saving...");
+                Console.WriteLine("\ndirectory exist, saving...");
             }
-            else if (!v)
+            else if (!Directory.Exists("D:\\tempforgenerator"))
             {
-                Console.WriteLine("Can't find directory!");
+                Console.WriteLine("\nCan't find directory!");
                 Console.WriteLine("Creating new folder...");
                 Directory.CreateDirectory("D:\\tempforgenerator\\");
             }
 
             image.Save("D:\\tempforgenerator\\generated.png", ImageFormat.Png);
             Console.WriteLine("Generated image and saved into generated.png");
-            Console.ReadLine();
         }
     }
 }
